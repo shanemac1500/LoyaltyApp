@@ -1,9 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Placeholder</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - Loyalty Card App</title>
   </head>
   <body>
-    <h1>Placeholder for register.html</h1>
+    <h1>Register for Loyalty Program</h1>
+
+    <form action="RegisterServlet" method="post">
+      <!-- Username Field -->
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required /><br /><br />
+
+      <!-- Password Field -->
+      <label for="password">Password:</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+      /><br /><br />
+
+      <!-- Confirm Password Field -->
+      <label for="confirmPassword">Confirm Password:</label>
+      <input
+        type="password"
+        id="confirmPassword"
+        name="confirmPassword"
+        required
+      /><br /><br />
+
+      <input type="submit" value="Register" />
+    </form>
   </body>
 </html>
