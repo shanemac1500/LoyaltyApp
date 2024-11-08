@@ -1,5 +1,3 @@
-package com.loyaltyapp.servlets;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
@@ -27,7 +25,7 @@ public class LoginServlet extends HttpServlet {
         response.setContentType("text/html");
         PrintWriter out = response.getWriter();
 
-        String jdbcURL = "jdbc:mysql://localhost:3306/loyaltyApp?serverTimezone=UTC";
+        String jdbcURL = "jdbc:mysql://localhost:3306/loyalty_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
         String dbUser = "root";
         String dbPassword = "rootroot1";  
 
@@ -43,7 +41,7 @@ public class LoginServlet extends HttpServlet {
                 HttpSession session = request.getSession();
                 session.setAttribute("username", username);
                 session.setAttribute("points", points);
-                response.sendRedirect("dashboard.html");
+                response.sendRedirect("points.html");
             } else {
                 out.println("<h3>Invalid username or password. Please try again.</h3>");
             }
