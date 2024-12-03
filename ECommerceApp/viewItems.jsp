@@ -1,21 +1,24 @@
 
-
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-   "http://www.w3.org/TR/html4/loose.dtd">
-<%@taglib uri="/struts-tags" prefix="s" %>
+<%@ taglib uri="/struts-tags" prefix="s" %>
 <html>
     <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Lotto Confirmation Page</title>
+        <title>Items for Sale</title>
     </head>
     <body>
-        <h1>Well done ! Here are your chosen numbers</h1>
-		<s:property value="num1" /> <br/>
-		<s:property value="num2" />  <br/>
-		<s:property value="num3" />  <br/>
-		<s:property value="num4" />  <br/>
-		
-		Also, here's the fixedMessage variable value that I set in the play method: <s:property value="fixedMessage" />  
+        <h1>Items for Sale</h1>
+        <s:iterator value="items" var="item">
+            <p>
+                <b>Item:</b> <s:property value="#item.name" /><br>
+                <b>Description:</b> <s:property value="#item.description" /><br>
+                <b>Price:</b> <s:property value="#item.price" /><br>
+                <form action="placeBid" method="post">
+                    <input type="hidden" name="itemId" value="<s:property value='#item.id' />">
+                    <label for="bidAmount">Your Bid:</label>
+                    <input type="text" name="bidAmount" required>
+                    <button type="submit">Place Bid</button>
+                </form>
+            </p>
+        </s:iterator>
+        <p><a href="addItem.jsp">Add Item</a></p>
     </body>
 </html>
