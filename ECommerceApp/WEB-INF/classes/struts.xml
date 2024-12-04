@@ -1,14 +1,66 @@
-<!DOCTYPE struts PUBLIC
-"-//Apache Software Foundation//DTD Struts Configuration 2.0//EN"
-"http://struts.apache.org/dtds/struts-2.0.dtd">
-
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN"
+    "http://struts.apache.org/dtds/struts-2.0.dtd">
 <struts>
-    <package name="default" extends="struts-default">
+    <package name="default" namespace="/" extends="struts-default">
 
-	<action name="playLotto" class="StrutsLotto" method ="play">
-        <result name="Fine">/confirmLotto.jsp</result>
-	    <result name="Fail">/negative.html</result>
-    </action>
-		
+        <!-- User Actions -->
+        <action name="register" class="UserAction" method="register">
+            <result name="SUCCESS">login.jsp</result>
+            <result name="ERROR">register.jsp</result>
+        </action>
+
+        <action name="login" class="UserAction" method="login">
+            <result name="SUCCESS">viewItems.jsp</result>
+            <result name="ERROR">login.jsp</result>
+        </action>
+
+        <action name="logoff" class="UserAction" method="logoff">
+            <result name="SUCCESS">login.jsp</result>
+        </action>
+
+        <action name="viewProfile" class="UserAction" method="viewProfile">
+            <result name="SUCCESS">userProfile.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
+        <action name="viewOtherProfile" class="UserAction" method="viewOtherProfile">
+            <result name="SUCCESS">otherProfile.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
+        <action name="viewAllUsers" class="UserAction" method="viewAllUsers">
+            <result name="SUCCESS">viewAllUsers.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
+        <!-- Item Actions -->
+        <action name="addItem" class="ItemAction" method="addItem">
+            <result name="SUCCESS">viewItems.jsp</result>
+            <result name="ERROR">addItem.jsp</result>
+        </action>
+
+        <action name="viewItems" class="ItemAction" method="viewItems">
+            <result name="SUCCESS">viewItems.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
+        <!-- Bid Actions -->
+        <action name="placeBid" class="BidAction" method="placeBid">
+            <result name="SUCCESS">viewMyBids.jsp</result>
+            <result name="ERROR">viewItems.jsp</result>
+            <result name="LOGIN_REQUIRED">login.jsp</result>
+        </action>
+
+        <action name="viewMyBids" class="BidAction" method="viewMyBids">
+            <result name="SUCCESS">viewMyBids.jsp</result>
+            <result name="LOGIN_REQUIRED">login.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
+        <action name="viewBidsForItem" class="BidAction" method="viewBidsForItem">
+            <result name="SUCCESS">viewBids.jsp</result>
+            <result name="ERROR">error.jsp</result>
+        </action>
+
     </package>
 </struts>
