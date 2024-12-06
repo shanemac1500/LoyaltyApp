@@ -1,4 +1,5 @@
-
+<%@ page contentType="text/html" pageEncoding="UTF-8" %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <%@ taglib uri="/struts-tags" prefix="s" %>
 <html>
   <head>
@@ -6,9 +7,7 @@
   </head>
   <body>
     <h1>My Profile</h1>
-    <p>Username: <s:property value="username" /></p>
-    <p>Email: <s:property value="email" /></p>
-    <a href="logoff.action">Logoff</a> |
-    <a href="viewItems.action">View Items</a>
+    <p>Logged in as: <s:property value="#session.username" /></p>
+    <p>Email: <s:property value="#session.email" /></p>
   </body>
 </html>
