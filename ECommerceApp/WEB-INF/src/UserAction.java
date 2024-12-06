@@ -26,6 +26,9 @@ public class UserAction {
 
     public String getTargetEmail() { return targetEmail; }
     public void setTargetEmail(String targetEmail) { this.targetEmail = targetEmail; }
+    
+    public String getErrorMessage() { return errorMessage; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }    
 
     // Setter for HTTP request, allowing access to session information
     public void setServletRequest(HttpServletRequest request) {
@@ -96,14 +99,15 @@ public class UserAction {
     public String viewProfile() {
         // Retrieve user details from the session
         HttpSession session = request.getSession(false);
-        if (session != null) {
-            username = (String) session.getAttribute("username");
-            email = (String) session.getAttribute("email");
-            return "SUCCESS"; // Profile view successful
+       if (session == null || session.getAttribute("username") == null) {
+            errorMessage = "No user logged in.";
+            return "ERROR";
         }
-        return "ERROR"; // No session found
-    }
 
+        username = (String) session.getAttribute("username");
+        email = (String) session.getAttribute("email");
+        return "SUCCESS";
+    }
     // Method to view another user's profile
     public String viewOtherProfile() {
         String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
@@ -145,7 +149,8 @@ public class UserAction {
 
             // Print all users to the console
             while (resultSet.next()) {
-                System.out.println(resultSet.getString("username") + " - " + resultSet.getString("email"));
+                System.out.println("Username: " + resultSet.getString("username"));
+                System.out.println("Email: " + resultSet.getString("email"));
             }
             return "SUCCESS"; // Successfully fetched all users
         } catch (SQLException e) {
