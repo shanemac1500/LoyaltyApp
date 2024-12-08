@@ -14,7 +14,7 @@
       <s:submit value="Register" />
     </s:form>
 
-    <s:form action="login">
+    <s:form action="login.action">
       <s:submit value="Login" />
     </s:form>
   </body>
