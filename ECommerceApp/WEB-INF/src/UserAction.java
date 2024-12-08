@@ -1,17 +1,18 @@
-import java.sql.*; // For database connections and SQL queries
-import javax.servlet.http.HttpServletRequest; // To access HTTP request information
-import javax.servlet.http.HttpSession; // To manage user sessions
+import java.sql.*;
+import java.util.*;
 
-public class UserAction {
-    // Fields for user information
-    private String username; // Username for the user
-    private String password; // Password for the user
-    private String email; // Email for the user
-    private String targetUsername; // Target username for viewing other profiles
-    private String targetEmail; // Target email for viewing other profiles
-    private HttpServletRequest request; // To access HTTP request data
+import org.apache.struts2.interceptor.SessionAware;
 
-    // Setters and Getters for the fields
+public class UserAction implements SessionAware {
+    private String username;
+    private String password;
+    private String email;
+    private String targetUsername;
+    private String targetEmail;
+    private String errorMessage;
+    private Map<String, Object> session;
+
+    // Getters and Setters
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 
@@ -26,137 +27,96 @@ public class UserAction {
 
     public String getTargetEmail() { return targetEmail; }
     public void setTargetEmail(String targetEmail) { this.targetEmail = targetEmail; }
-    
+
     public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }    
-
-    // Setter for HTTP request, allowing access to session information
-    public void setServletRequest(HttpServletRequest request) {
-        this.request = request;
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    @SuppressWarnings("unchecked")
+    @Override
+    public void setSession(Map session) {
+        this.session = (Map<String, Object>)session;
     }
 
-    // Method for user registration
+    // Database connection helper
+    private Connection getConnection() throws Exception {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/ecommerce_db?serverTimezone=UTC", "root", "rootroot1");
+    }
+
+    // **Register a New User**
     public String register() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db"; // Database connection URL
-        String dbUser = "root"; // Database username
-        String dbPassword = "rootroot1"; // Database password
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to insert a new user into the database
-            String sql = "INSERT INTO users (username, password, email) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, username); // Set username
-            statement.setString(2, password); // Set password
-            statement.setString(3, email); // Set email
-            int rowsInserted = statement.executeUpdate(); // Execute the query
-            return rowsInserted > 0 ? "SUCCESS" : "ERROR"; // Return result based on insertion status
-        } catch (SQLException e) {
-            e.printStackTrace(); // Log any SQL errors
-            return "ERROR"; // Return error if the operation fails
-        }
-    }
-
-    // Method for user login
-    public String login() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to validate user credentials
-            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, username);
-            statement.setString(2, password);
-            ResultSet resultSet = statement.executeQuery(); // Execute query and get results
-
-            if (resultSet.next()) {
-                // If the user exists, create a session and store user details
-                HttpSession session = request.getSession();
-                session.setAttribute("username", username);
-                session.setAttribute("email", resultSet.getString("email"));
-                return "SUCCESS"; // Login successful
-            } else {
-                return "ERROR"; // Login failed
-            }
-        } catch (SQLException e) {
+        try (Connection connection = getConnection()) {
+            PreparedStatement createUser = connection.prepareStatement("INSERT INTO users (username, password, email) VALUES (?, ?, ?)");
+            createUser.setString(1, username);
+            createUser.setString(2, password);
+            createUser.setString(3, email);
+            int rowsInserted = createUser.executeUpdate();
+            createUser.close();
+            return rowsInserted > 0 ? "SUCCESS" : "ERROR";
+        } catch (Exception e) {
             e.printStackTrace();
+            errorMessage = "Database error during registration.";
             return "ERROR";
         }
     }
 
-    // Method for user logoff
-    public String logoff() {
-        // Invalidate the session to log off the user
-        HttpSession session = request.getSession(false); // Get existing session if available
-        if (session != null) {
-            session.invalidate(); // Destroy the session
+    // **Login User**
+    public String login() {
+        try (Connection connection = getConnection()) {
+            PreparedStatement findUser = connection.prepareStatement("SELECT * FROM users WHERE username = ? AND password = ?");
+            findUser.setString(1, username);
+            findUser.setString(2, password);
+            ResultSet resultSet = findUser.executeQuery();
+
+            if (resultSet.next()) {
+                // Store username and email in session
+                session.put("username", username);
+                session.put("email", resultSet.getString("email"));
+                findUser.close();
+                return "SUCCESS";
+            } else {
+                errorMessage = "Invalid credentials.";
+                return "ERROR";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            errorMessage = "Database error during login.";
+            return "ERROR";
         }
-        return "SUCCESS"; // Logoff successful
     }
 
-    // Method to view the logged-in user's profile
+    // **Logoff User**
+    public String logoff() {
+        session.clear(); // Clear session data
+        return "SUCCESS";
+    }
+
+    // **View Logged-In User's Profile**
     public String viewProfile() {
-        // Retrieve user details from the session
-        HttpSession session = request.getSession(false);
-       if (session == null || session.getAttribute("username") == null) {
+        if (session.get("username") == null) {
             errorMessage = "No user logged in.";
             return "ERROR";
         }
-
-        username = (String) session.getAttribute("username");
-        email = (String) session.getAttribute("email");
+        username = (String) session.get("username");
+        email = (String) session.get("email");
         return "SUCCESS";
     }
-    // Method to view another user's profile
-    public String viewOtherProfile() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
 
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to retrieve another user's details
-            String sql = "SELECT username, email FROM users WHERE username = ?";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, targetUsername); // Set the target username
-            ResultSet resultSet = statement.executeQuery();
+    // **View All Users**
+    public String viewAllUsers() {
+        Map<String, String> allUsersMap = new HashMap<>();
+        try (Connection connection = getConnection()) {
+            Statement getUsers = connection.createStatement();
+            ResultSet resultSet = getUsers.executeQuery("SELECT username, email FROM users");
 
-            if (resultSet.next()) {
-                // Set the target user details
-                targetUsername = resultSet.getString("username");
-                targetEmail = resultSet.getString("email");
-                return "SUCCESS"; // Profile retrieved successfully
-            } else {
-                return "ERROR"; // User not found
+            while (resultSet.next()) {
+                allUsersMap.put(resultSet.getString("username"), resultSet.getString("email"));
             }
-        } catch (SQLException e) {
+            session.put("allUsersMap", allUsersMap); // Store in session
+            getUsers.close();
+            return "SUCCESS";
+        } catch (Exception e) {
             e.printStackTrace();
+            errorMessage = "Database error during fetching all users.";
             return "ERROR";
         }
     }
-
-    // Method to view all users
-    public String viewAllUsers() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to fetch all users
-            String sql = "SELECT username, email FROM users";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            ResultSet resultSet = statement.executeQuery();
-
-            // Print all users to the console
-            while (resultSet.next()) {
-                System.out.println("Username: " + resultSet.getString("username"));
-                System.out.println("Email: " + resultSet.getString("email"));
-            }
-            return "SUCCESS"; // Successfully fetched all users
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "ERROR"; // Error fetching users
-        }
-    }
 }
-
