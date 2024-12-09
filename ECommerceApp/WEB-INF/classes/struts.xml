@@ -10,7 +10,7 @@
         </action>
 
         <action name="login" class="UserAction" method="login">
-            <result name="SUCCESS">viewItems.jsp</result>
+            <result name="SUCCESS">home.jsp</result>
             <result name="ERROR">login.jsp</result>
         </action>
 
@@ -24,7 +24,7 @@
         </action>
 
         <action name="viewOtherProfile" class="UserAction" method="viewOtherProfile">
-            <result name="SUCCESS">otherProfile.jsp</result>
+            <result name="SUCCESS">viewOtherProfile.jsp</result>
             <result name="ERROR">error.jsp</result>
         </action>
 
@@ -47,20 +47,19 @@
         <!-- Bid Actions -->
         <action name="placeBid" class="BidAction" method="placeBid">
             <result name="SUCCESS">viewMyBids.jsp</result>
+            <result name="INPUT">placeBid.jsp</result>
             <result name="ERROR">viewItems.jsp</result>
-            <result name="LOGIN_REQUIRED">login.jsp</result>
-        </action>
+       </action>
 
         <action name="viewMyBids" class="BidAction" method="viewMyBids">
-            <result name="SUCCESS">viewMyBids.jsp</result>
-            <result name="LOGIN_REQUIRED">login.jsp</result>
-            <result name="ERROR">error.jsp</result>
+           <result name="SUCCESS">viewMyBids.jsp</result>
+           <result name="ERROR">error.jsp</result>
         </action>
 
-        <action name="viewBidsForItem" class="BidAction" method="viewBidsForItem">
-            <result name="SUCCESS">viewBids.jsp</result>
-            <result name="ERROR">error.jsp</result>
-        </action>
+       <action name="viewBidsForItem" class="BidAction" method="viewBidsForItem">
+          <result name="SUCCESS">viewBids.jsp</result>
+          <result name="ERROR">error.jsp</result>
+       </action>
 
     </package>
 </struts>
