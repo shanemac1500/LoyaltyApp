@@ -1,68 +1,141 @@
-import java.sql.*; // Import for database connections and SQL execution
-import java.util.ArrayList;
-import java.util.List;
 
-public class ItemAction {
+import com.opensymphony.xwork2.ActionSupport;
+import org.apache.struts2.interceptor.SessionAware;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ItemAction extends ActionSupport implements SessionAware {
+    private static final long serialVersionUID = 1L;
+
     // Fields for item details
-    private String itemName; // Name of the item
-    private String itemDescription; // Description of the item
-    private double itemPrice; // Price of the item
+    private String itemName;
+    private String itemDescription;
+    private double itemPrice;
+    private String message;
+    private Map<String, Object> session;
+    private List<Map<String, Object>> items; // List to hold items for the JSP
 
     // Getters and Setters
-    public String getItemName() { return itemName; }
-    public void setItemName(String itemName) { this.itemName = itemName; }
+    public String getItemName() {
+        return itemName;
+    }
 
-    public String getItemDescription() { return itemDescription; }
-    public void setItemDescription(String itemDescription) { this.itemDescription = itemDescription; }
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
 
-    public double getItemPrice() { return itemPrice; }
-    public void setItemPrice(double itemPrice) { this.itemPrice = itemPrice; }
+    public String getItemDescription() {
+        return itemDescription;
+    }
 
-    // Method to add an item for sale
+    public void setItemDescription(String itemDescription) {
+        this.itemDescription = itemDescription;
+    }
+
+    public double getItemPrice() {
+        return itemPrice;
+    }
+
+    public void setItemPrice(double itemPrice) {
+        this.itemPrice = itemPrice;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public List<Map<String, Object>> getItems() {
+        return items;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void setSession(Map session) {
+        this.session = (Map<String, Object>) session;
+    }
+
+    // Database connection helper
+    private Connection getConnection() throws Exception {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/ecommerce_db?serverTimezone=UTC", "root", "rootroot1");
+    }
+
+    // Add an item
     public String addItem() {
-        // Database connection details
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root"; // Database username
-        String dbPassword = "rootroot1"; // Database password
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to insert a new item into the items table
-            String sql = "INSERT INTO items (name, description, price) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, itemName); // Set item name
-            statement.setString(2, itemDescription); // Set item description
-            statement.setDouble(3, itemPrice); // Set item price
-            // Execute the update and return the result
-            return statement.executeUpdate() > 0 ? "SUCCESS" : "ERROR";
-        } catch (SQLException e) {
-            e.printStackTrace(); // Log SQL errors
-            return "ERROR"; // Return error if operation fails
-        }
-    }
-
-    // Method to view all items for sale
-    public String viewItems() {
-        // Database connection details
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to retrieve all items from the items table
-            String sql = "SELECT * FROM items";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            ResultSet resultSet = statement.executeQuery(); // Execute query and get results
-
-            // Iterate through results and print item details (For demonstration purposes)
-            while (resultSet.next()) {
-                System.out.println(
-                    resultSet.getString("name") + " - $" + resultSet.getDouble("price")
-                );
+        try (Connection connection = getConnection()) {
+            // Retrieve user ID from the session
+            Integer userId = (Integer) session.get("loggedInUserId");
+            if (userId == null) {
+                message = "DEBUG: User not logged in.";
+                System.out.println(message);
+                return "ERROR";
             }
-            return "SUCCESS"; // Return success if items are fetched
-        } catch (SQLException e) {
-            e.printStackTrace(); // Log SQL errors
-            return "ERROR"; // Return error if operation fails
+
+            System.out.println("DEBUG: User ID retrieved: " + userId);
+
+            // Insert item into the database
+            String sql = "INSERT INTO items (user_id, name, description, price) VALUES (?, ?, ?, ?)";
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setInt(1, userId);
+            preparedStatement.setString(2, itemName);
+            preparedStatement.setString(3, itemDescription);
+            preparedStatement.setDouble(4, itemPrice);
+
+            int rowsInserted = preparedStatement.executeUpdate();
+            preparedStatement.close();
+
+            if (rowsInserted > 0) {
+                message = "DEBUG: Item added successfully!";
+                System.out.println(message);
+                return "SUCCESS";
+            } else {
+                message = "DEBUG: Failed to add item to the database.";
+                System.out.println(message);
+                return "ERROR";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            message = "DEBUG: Database error occurred: " + e.getMessage();
+            System.out.println(message);
+            return "ERROR";
+        }
+    } 
+
+ // View all items 
+    public String viewItems() {
+        items = new ArrayList<>(); // Ensure the list is initialized
+
+        try (Connection connection = getConnection()) {
+            String sql = "SELECT name, description, price FROM items";
+            PreparedStatement statement = connection.prepareStatement(sql);
+            ResultSet resultSet = statement.executeQuery();
+
+            while (resultSet.next()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", resultSet.getString("name"));
+                item.put("description", resultSet.getString("description"));
+                item.put("price", resultSet.getDouble("price"));
+                items.add(item); // Add item to the list
+            }
+
+            System.out.println("DEBUG: Number of items: " + items.size());
+
+            for (Map<String, Object> item : items) {
+                System.out.println("DEBUG: Item Details - Name: " + item.get("name") + ", Price: $" + item.get("price"));
+            }
+
+            statement.close();
+            return items.size() > 0 ? "SUCCESS" : "ERROR"; // Return ERROR if no items
+        } catch (Exception e) {
+            e.printStackTrace();
+            message = "Database error occurred.";
+            return "ERROR";
         }
     }
-}
+    }
