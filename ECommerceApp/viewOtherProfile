@@ -1,0 +1,19 @@
+<%@ taglib uri="/struts-tags" prefix="s" %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <title>View Profile</title>
+  </head>
+  <body>
+    <!-- Display logged-in user -->
+    <s:if test="#session.username != null">
+      <p>Logged in as: <s:property value="#session.username" /></p>
+    </s:if>
+
+    <h1>Profile of <s:property value="#session.targetUsername" /></h1>
+    <p>Email: <s:property value="#session.targetEmail" /></p>
+
+    <br />
+    <a href="viewAllUsers.action">Back to All Users</a>
+  </body>
+</html>
