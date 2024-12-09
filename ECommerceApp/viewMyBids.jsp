@@ -1,5 +1,5 @@
-<%@ taglib uri="/struts-tags" prefix="s" %>
-<%@ page contentType="text/html" pageEncoding="UTF-8" %>
+<%@ taglib uri="/struts-tags" prefix="s" %> <%@ page contentType="text/html"
+pageEncoding="UTF-8" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
@@ -18,7 +18,7 @@
     <s:if test="bids != null && bids.size() > 0">
       <s:iterator value="bids">
         <div>
-          <p>Item ID: <s:property value="itemId" /></p>
+          <p>Item Name: <s:property value="itemName" /></p>
           <p>Bid Amount: <s:property value="bidAmount" /></p>
         </div>
         <hr />
