@@ -6,8 +6,12 @@
     <title>My Profile</title>
   </head>
   <body>
+    <!-- Display logged-in user -->
     <h1>My Profile</h1>
     <p>Logged in as: <s:property value="#session.username" /></p>
     <p>Email: <s:property value="#session.email" /></p>
+
+    <br />
+    <a href="home.jsp">Back to Home</a>
   </body>
 </html>
