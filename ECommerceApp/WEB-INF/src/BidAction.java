@@ -1,131 +1,200 @@
-import java.sql.*; // For database operations
+
+import com.opensymphony.xwork2.ActionSupport;
+import org.apache.struts2.interceptor.SessionAware;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import javax.servlet.http.HttpServletRequest; // To access HTTP request data
-import javax.servlet.http.HttpSession; // To manage sessions
-import org.apache.struts2.interceptor.ServletRequestAware; // Interface for Struts2 to inject HTTP request
+import java.util.Map;
 
-public class BidAction implements ServletRequestAware {
-    // Fields for bid details
-    private int itemId; // ID of the item being bid on
-    private int userId; // ID of the logged-in user
-    private double bidAmount; // Amount of the bid
-    private List<String> bids; // List to store bids for display
-    private HttpServletRequest request; // To access session data
+public class BidAction extends ActionSupport implements SessionAware {
+    private static final long serialVersionUID = 1L;
 
-    // Setters and Getters
-    public int getItemId() { return itemId; }
-    public void setItemId(int itemId) { this.itemId = itemId; }
+    // Fields for bidding details
+    private int itemId; // Item ID
+    private double bidAmount; // Bid amount
+    private String message; // Feedback message
+    private List<Map<String, Object>> bids; // List to hold bid details
+    private Map<String, Object> session; // Session map
 
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
+    // Getters and Setters
+    public int getItemId() {
+        return itemId;
+    }
 
-    public double getBidAmount() { return bidAmount; }
-    public void setBidAmount(double bidAmount) { this.bidAmount = bidAmount; }
+    public void setItemId(int itemId) {
+        this.itemId = itemId;
+    }
 
-    public List<String> getBids() { return bids; }
-    public void setBids(List<String> bids) { this.bids = bids; }
+    public double getBidAmount() {
+        return bidAmount;
+    }
 
-    // Inject the HttpServletRequest
+    public void setBidAmount(double bidAmount) {
+        this.bidAmount = bidAmount;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public List<Map<String, Object>> getBids() {
+        return bids;
+    }
+
+    @SuppressWarnings("unchecked")
     @Override
-    public void setServletRequest(HttpServletRequest request) {
-        this.request = request;
+    public void setSession(Map session) {
+        this.session = (Map<String, Object>) session;
     }
 
-    // 1. Make a Bid
+    // Database connection helper
+    private Connection getConnection() throws Exception {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/ecommerce_db?serverTimezone=UTC", "root", "rootroot1");
+    }
+
     public String placeBid() {
-        // Database connection details
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
+        try (Connection connection = getConnection()) {
+            // Fetch items for the dropdown menu
+            String fetchItemsSql = "SELECT id, name FROM items";
+            PreparedStatement fetchItemsStatement = connection.prepareStatement(fetchItemsSql);
+            ResultSet itemsResultSet = fetchItemsStatement.executeQuery();
 
-        // Check if the user is logged in
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("userId") == null) {
-            return "LOGIN_REQUIRED"; // Redirect to login if not logged in
-        }
+            List<Map<String, Object>> itemsList = new ArrayList<>();
+            while (itemsResultSet.next()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", itemsResultSet.getInt("id"));
+                item.put("name", itemsResultSet.getString("name"));
+                itemsList.add(item);
+            }
+            session.put("items", itemsList); // Store items in session
+            fetchItemsStatement.close();
 
-        // Get the logged-in user's ID from the session
-        userId = (int) session.getAttribute("userId");
+            // If bidAmount is not set, return the form with items
+            if (bidAmount <= 0 || itemId == 0) {
+                message = "DEBUG: Preparing bid form.";
+                System.out.println(message);
+                return "INPUT"; // Return INPUT to show the form
+            }
 
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to insert a new bid
-            String sql = "INSERT INTO bids (item_id, user_id, bid_amount) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, itemId); // Set item ID
-            statement.setInt(2, userId); // Set user ID
-            statement.setDouble(3, bidAmount); // Set bid amount
-            int rowsInserted = statement.executeUpdate(); // Execute the query
+            // Handle bid submission
+            Integer userId = (Integer) session.get("loggedInUserId");
+            if (userId == null) {
+                message = "DEBUG: User not logged in.";
+                System.out.println(message);
+                return "ERROR";
+            }
 
-            return rowsInserted > 0 ? "SUCCESS" : "ERROR"; // Return based on query success
-        } catch (SQLException e) {
+            String insertBidSql = "INSERT INTO bids (item_id, user_id, bid_amount) VALUES (?, ?, ?)";
+            PreparedStatement insertBidStatement = connection.prepareStatement(insertBidSql);
+            insertBidStatement.setInt(1, itemId);
+            insertBidStatement.setInt(2, userId);
+            insertBidStatement.setDouble(3, bidAmount);
+
+            int rowsInserted = insertBidStatement.executeUpdate();
+            insertBidStatement.close();
+
+            if (rowsInserted > 0) {
+                message = "DEBUG: Bid placed successfully!";
+                System.out.println(message);
+                return "SUCCESS";
+            } else {
+                message = "DEBUG: Failed to place bid.";
+                System.out.println(message);
+                return "ERROR";
+            }
+        } catch (Exception e) {
             e.printStackTrace();
-            return "ERROR"; // Return error if something goes wrong
+            message = "DEBUG: Database error occurred: " + e.getMessage();
+            return "ERROR";
         }
     }
+    
+    public String viewBidsForItem() {
+        try (Connection connection = getConnection()) {
+            Integer userId = (Integer) session.get("loggedInUserId");
+            if (userId == null) {
+                message = "DEBUG: User not logged in.";
+                System.out.println(message);
+                return "ERROR";
+            }
 
-    // 2. View My Bids
-    public String viewMyBids() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
-
-        // Check if the user is logged in
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("userId") == null) {
-            return "LOGIN_REQUIRED"; // Redirect to login if not logged in
-        }
-
-        // Get the logged-in user's ID
-        userId = (int) session.getAttribute("userId");
-        bids = new ArrayList<>(); // Initialize the list for storing bids
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to fetch bids made by the logged-in user
-            String sql = "SELECT i.name, b.bid_amount FROM bids b INNER JOIN items i ON b.item_id = i.id WHERE b.user_id = ?";
+            // Query to get bids on items posted by the logged-in user
+            String sql = "SELECT b.item_id, b.user_id, b.bid_amount, i.name AS item_name " +
+                         "FROM bids b " +
+                         "JOIN items i ON b.item_id = i.id " +
+                         "WHERE i.user_id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, userId);
+
             ResultSet resultSet = statement.executeQuery();
+            bids = new ArrayList<>();
 
             while (resultSet.next()) {
-                // Format and add each bid to the list
-                String itemName = resultSet.getString("name");
-                double bidAmount = resultSet.getDouble("bid_amount");
-                bids.add("Item: " + itemName + ", Bid: $" + bidAmount);
+                Map<String, Object> bid = new HashMap<>();
+                bid.put("itemId", resultSet.getInt("item_id"));
+                bid.put("itemName", resultSet.getString("item_name"));
+                bid.put("userId", resultSet.getInt("user_id"));
+                bid.put("bidAmount", resultSet.getDouble("bid_amount"));
+                bids.add(bid);
             }
-            return "SUCCESS"; // Return success if data is retrieved
-        } catch (SQLException e) {
+
+            statement.close();
+
+            if (bids.isEmpty()) {
+                message = "DEBUG: No bids found for your items.";
+                System.out.println(message);
+            } else {
+                System.out.println("DEBUG: Bids found for your items: " + bids.size());
+            }
+
+            return "SUCCESS";
+        } catch (Exception e) {
             e.printStackTrace();
+            message = "DEBUG: Database error occurred.";
             return "ERROR";
         }
     }
+    
+    public String viewMyBids() {
+        try (Connection connection = getConnection()) {
+            Integer userId = (Integer) session.get("loggedInUserId");
+            if (userId == null) {
+                message = "DEBUG: User not logged in.";
+                System.out.println(message);
+                return "ERROR";
+            }
 
-    // 3. View All Bids on an Item
-    public String viewBidsForItem() {
-        String jdbcURL = "jdbc:mysql://localhost:3306/ecommerce_db";
-        String dbUser = "root";
-        String dbPassword = "rootroot1";
-
-        bids = new ArrayList<>(); // Initialize the list for storing bids
-
-        try (Connection connection = DriverManager.getConnection(jdbcURL, dbUser, dbPassword)) {
-            // SQL query to fetch all bids on a specific item
-            String sql = "SELECT u.username, b.bid_amount FROM bids b INNER JOIN users u ON b.user_id = u.id WHERE b.item_id = ?";
+            // Updated SQL to join items and fetch item name
+            String sql = "SELECT b.item_id, b.bid_amount, i.name AS itemName " +
+                         "FROM bids b " +
+                         "JOIN items i ON b.item_id = i.id " +
+                         "WHERE b.user_id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, itemId);
+            statement.setInt(1, userId);
+
             ResultSet resultSet = statement.executeQuery();
+            bids = new ArrayList<>();
 
             while (resultSet.next()) {
-                // Format and add each bid to the list
-                String bidder = resultSet.getString("username");
-                double bidAmount = resultSet.getDouble("bid_amount");
-                bids.add("Bidder: " + bidder + ", Bid: $" + bidAmount);
+                Map<String, Object> bid = new HashMap<>();
+                bid.put("itemId", resultSet.getInt("item_id"));
+                bid.put("bidAmount", resultSet.getDouble("bid_amount"));
+                bid.put("itemName", resultSet.getString("itemName")); // Fetch item name
+                bids.add(bid);
             }
-            return "SUCCESS"; // Return success if data is retrieved
-        } catch (SQLException e) {
+
+            statement.close();
+            System.out.println("DEBUG: Number of bids: " + bids.size());
+            return "SUCCESS";
+        } catch (Exception e) {
             e.printStackTrace();
+            message = "DEBUG: Database error occurred.";
             return "ERROR";
         }
     }
-}
-
+    }
